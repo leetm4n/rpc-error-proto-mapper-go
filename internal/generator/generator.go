@@ -93,6 +93,12 @@ func getOptions(value *protogen.EnumValue) *rpcerrormapperv1.EnumValueLevelOptio
 
 func (g *generator) addErrors(enum *protogen.Enum) {
 	for _, value := range enum.Values {
+		options := getOptions(value)
+
+		if options == nil {
+			continue
+		}
+
 		name := uppperSnakeCaseToPascalCase(stripEnumValuePrefix(value.GoIdent.GoName, enum.GoIdent.GoName))
 
 		g.gen.P(fmt.Sprintf("type %s struct{", name))
@@ -149,6 +155,12 @@ func (g *generator) addDecoderMapper(enum *protogen.Enum) {
 	g.gen.P(fmt.Sprintf("func %sDecoderMapper(code code.Code, reason, domain string, metadata map[string]string) error {", enum.GoIdent.GoName))
 	g.gen.P("  switch reason {")
 	for _, value := range enum.Values {
+		options := getOptions(value)
+
+		if options == nil {
+			continue
+		}
+
 		nameWithoutPrefix := stripEnumValuePrefix(value.GoIdent.GoName, enum.GoIdent.GoName)
 		name := uppperSnakeCaseToPascalCase(nameWithoutPrefix)
 
@@ -163,6 +175,12 @@ func (g *generator) addDecoderMapper(enum *protogen.Enum) {
 
 func (g *generator) addEncoders(enum *protogen.Enum) {
 	for _, value := range enum.Values {
+		options := getOptions(value)
+
+		if options == nil {
+			continue
+		}
+
 		g.addEncoder(value, enum)
 	}
 }

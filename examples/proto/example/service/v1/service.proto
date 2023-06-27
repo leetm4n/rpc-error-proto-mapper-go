@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package example.errors.v1;
+package example.service.v1;
 
 option go_package = "github.com/leetm4n/rpc-error-proto-mapper-go/examples/proto/example/service/v1;exampleservicev1";
 
@@ -10,10 +10,7 @@ enum ServiceError {
   option (rpc.errormapper.v1.isGenerationTarget) = true;
 
   // The default value is reserved for the proto compiler.
-  SERVICE_ERROR_UNSPECIFIED = 0 [(rpc.errormapper.v1.options) = {
-    code: 2,
-    domain: "service.entity",
-  }];
+  SERVICE_ERROR_UNSPECIFIED = 0;
   // The entity was not found.
   SERVICE_ERROR_ENTITY_NOT_FOUND = 1 [(rpc.errormapper.v1.options) = {
     code: 5,

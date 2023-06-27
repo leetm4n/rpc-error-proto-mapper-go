@@ -8,42 +8,6 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/code"
 )
 
-type ServiceErrorUnspecified struct {
-	code     code.Code
-	reason   string
-	domain   string
-	metadata map[string]string
-}
-
-func (e ServiceErrorUnspecified) Error() string {
-	return fmt.Sprintf("%s: %s", e.code, e.reason)
-}
-
-func (e ServiceErrorUnspecified) Code() code.Code {
-	return e.code
-}
-
-func (e ServiceErrorUnspecified) Reason() string {
-	return e.reason
-}
-
-func (e ServiceErrorUnspecified) Domain() string {
-	return e.domain
-}
-
-func (e ServiceErrorUnspecified) Metadata() map[string]string {
-	return e.metadata
-}
-
-func NewServiceErrorUnspecified(code code.Code, reason string, domain string, metadata map[string]string) ServiceErrorUnspecified {
-	return ServiceErrorUnspecified{
-		code:     code,
-		reason:   reason,
-		domain:   domain,
-		metadata: metadata,
-	}
-}
-
 type ServiceErrorEntityNotFound struct {
 	code     code.Code
 	reason   string
@@ -117,9 +81,6 @@ func NewServiceErrorUserNotEligibleForAction(code code.Code, reason string, doma
 }
 
 const (
-	ServiceErrorUnspecifiedCode                = 2
-	ServiceErrorUnspecifiedDomain              = "service.entity"
-	ServiceErrorUnspecifiedReason              = "SERVICE_ERROR_UNSPECIFIED"
 	ServiceErrorEntityNotFoundCode             = 5
 	ServiceErrorEntityNotFoundDomain           = "service.entity"
 	ServiceErrorEntityNotFoundReason           = "SERVICE_ERROR_ENTITY_NOT_FOUND"
@@ -130,8 +91,6 @@ const (
 
 func ServiceErrorDecoderMapper(code code.Code, reason, domain string, metadata map[string]string) error {
 	switch reason {
-	case ServiceErrorUnspecifiedReason:
-		return NewServiceErrorUnspecified(code, reason, domain, metadata)
 	case ServiceErrorEntityNotFoundReason:
 		return NewServiceErrorEntityNotFound(code, reason, domain, metadata)
 	case ServiceErrorUserNotEligibleForActionReason:
@@ -141,9 +100,6 @@ func ServiceErrorDecoderMapper(code code.Code, reason, domain string, metadata m
 	}
 }
 
-func ServiceErrorUnspecifiedEncoder(metadata map[string]string) (code.Code, string, string, map[string]string) {
-	return ServiceErrorUnspecifiedCode, ServiceErrorUnspecifiedReason, ServiceErrorUnspecifiedDomain, metadata
-}
 func ServiceErrorEntityNotFoundEncoder(metadata map[string]string) (code.Code, string, string, map[string]string) {
 	return ServiceErrorEntityNotFoundCode, ServiceErrorEntityNotFoundReason, ServiceErrorEntityNotFoundDomain, metadata
 }
