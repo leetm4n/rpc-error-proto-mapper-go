@@ -1,0 +1,11 @@
+version: v1
+name: buf.build/clr/rpc-errormapper-go
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - DEFAULT
+    - COMMENTS
+    - UNARY_RPC
+    - PACKAGE_NO_IMPORT_CYCLE
