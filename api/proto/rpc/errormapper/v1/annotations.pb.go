@@ -21,6 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Options for the Enum
 type EnumValueLevelOptions struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

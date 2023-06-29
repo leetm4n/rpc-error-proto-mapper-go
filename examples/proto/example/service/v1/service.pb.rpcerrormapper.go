@@ -5,78 +5,194 @@ package exampleservicev1
 
 import (
 	"fmt"
+	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/genproto/googleapis/rpc/code"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
+func encode(code code.Code, details []*anypb.Any) ([]byte, error) {
+	marshalled, err := proto.Marshal(&status.Status{
+		Code:    int32(code),
+		Details: details,
+		Message: "error",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return marshalled, nil
+}
+
+type details struct {
+	Code                       code.Code
+	ErrorInfoDetails           *errdetails.ErrorInfo
+	RetryInfoDetails           *errdetails.RetryInfo
+	BadRequestDetails          *errdetails.BadRequest
+	DebugInfoDetails           *errdetails.DebugInfo
+	QuotaFailureDetails        *errdetails.QuotaFailure
+	PreconditionFailureDetails *errdetails.PreconditionFailure
+	ResourceInfoDetails        *errdetails.ResourceInfo
+}
+
+func decode(payload []byte) (*details, error) {
+	s := &status.Status{}
+	err := proto.Unmarshal(payload, s)
+	if err != nil {
+		return nil, err
+	}
+	var errorInfoDetails *errdetails.ErrorInfo
+	var badRequestDetails *errdetails.BadRequest
+	var debugInfoDetails *errdetails.DebugInfo
+	var quotaFailureDetails *errdetails.QuotaFailure
+	var preconditionFailureDetails *errdetails.PreconditionFailure
+	var resourceInfoDetails *errdetails.ResourceInfo
+	for _, detail := range s.Details {
+		unmarshalled, err := anypb.UnmarshalNew(detail, proto.UnmarshalOptions{})
+		if err != nil {
+			return nil, err
+		}
+		switch v := unmarshalled.(type) {
+		case *errdetails.ErrorInfo:
+			errorInfoDetails = v
+		case *errdetails.BadRequest:
+			badRequestDetails = v
+		case *errdetails.DebugInfo:
+			debugInfoDetails = v
+		case *errdetails.QuotaFailure:
+			quotaFailureDetails = v
+		case *errdetails.PreconditionFailure:
+			preconditionFailureDetails = v
+		case *errdetails.ResourceInfo:
+			resourceInfoDetails = v
+		default:
+			return nil, fmt.Errorf("unknown error detail: %s", v)
+		}
+	}
+	return &details{
+		Code:                       code.Code(s.Code),
+		ErrorInfoDetails:           errorInfoDetails,
+		BadRequestDetails:          badRequestDetails,
+		DebugInfoDetails:           debugInfoDetails,
+		QuotaFailureDetails:        quotaFailureDetails,
+		PreconditionFailureDetails: preconditionFailureDetails,
+		ResourceInfoDetails:        resourceInfoDetails,
+	}, nil
+}
+
 type ServiceErrorEntityNotFound struct {
-	code     code.Code
-	reason   string
-	domain   string
-	metadata map[string]string
+	code                code.Code
+	errorInfoDetails    *errdetails.ErrorInfo
+	debugInfoDetails    *errdetails.DebugInfo
+	resourceInfoDetails *errdetails.ResourceInfo
 }
 
 func (e ServiceErrorEntityNotFound) Error() string {
-	return fmt.Sprintf("%s: %s", e.code, e.reason)
+	return fmt.Sprintf("%s: %s", e.code, e.errorInfoDetails.Reason)
 }
 
 func (e ServiceErrorEntityNotFound) Code() code.Code {
 	return e.code
 }
 
-func (e ServiceErrorEntityNotFound) Reason() string {
-	return e.reason
+func (e ServiceErrorEntityNotFound) ErrorInfoDetails() *errdetails.ErrorInfo {
+	return e.errorInfoDetails
 }
 
-func (e ServiceErrorEntityNotFound) Domain() string {
-	return e.domain
+func (e ServiceErrorEntityNotFound) ResourceInfoDetails() *errdetails.ResourceInfo {
+	return e.resourceInfoDetails
 }
 
-func (e ServiceErrorEntityNotFound) Metadata() map[string]string {
-	return e.metadata
+func (e ServiceErrorEntityNotFound) DebugInfoDetails() *errdetails.DebugInfo {
+	return e.debugInfoDetails
 }
 
-func NewServiceErrorEntityNotFound(code code.Code, reason string, domain string, metadata map[string]string) ServiceErrorEntityNotFound {
+func NewServiceErrorEntityNotFound(
+	code code.Code,
+	errorInfoDetails *errdetails.ErrorInfo,
+	resourceInfoDetails *errdetails.ResourceInfo,
+	debugInfoDetails *errdetails.DebugInfo,
+) ServiceErrorEntityNotFound {
 	return ServiceErrorEntityNotFound{
-		code:     code,
-		reason:   reason,
-		domain:   domain,
-		metadata: metadata,
+		code:                code,
+		errorInfoDetails:    errorInfoDetails,
+		resourceInfoDetails: resourceInfoDetails,
+		debugInfoDetails:    debugInfoDetails,
 	}
 }
 
 type ServiceErrorUserNotEligibleForAction struct {
-	code     code.Code
-	reason   string
-	domain   string
-	metadata map[string]string
+	code             code.Code
+	errorInfoDetails *errdetails.ErrorInfo
+	debugInfoDetails *errdetails.DebugInfo
 }
 
 func (e ServiceErrorUserNotEligibleForAction) Error() string {
-	return fmt.Sprintf("%s: %s", e.code, e.reason)
+	return fmt.Sprintf("%s: %s", e.code, e.errorInfoDetails.Reason)
 }
 
 func (e ServiceErrorUserNotEligibleForAction) Code() code.Code {
 	return e.code
 }
 
-func (e ServiceErrorUserNotEligibleForAction) Reason() string {
-	return e.reason
+func (e ServiceErrorUserNotEligibleForAction) ErrorInfoDetails() *errdetails.ErrorInfo {
+	return e.errorInfoDetails
 }
 
-func (e ServiceErrorUserNotEligibleForAction) Domain() string {
-	return e.domain
+func (e ServiceErrorUserNotEligibleForAction) DebugInfoDetails() *errdetails.DebugInfo {
+	return e.debugInfoDetails
 }
 
-func (e ServiceErrorUserNotEligibleForAction) Metadata() map[string]string {
-	return e.metadata
-}
-
-func NewServiceErrorUserNotEligibleForAction(code code.Code, reason string, domain string, metadata map[string]string) ServiceErrorUserNotEligibleForAction {
+func NewServiceErrorUserNotEligibleForAction(
+	code code.Code,
+	errorInfoDetails *errdetails.ErrorInfo,
+	debugInfoDetails *errdetails.DebugInfo,
+) ServiceErrorUserNotEligibleForAction {
 	return ServiceErrorUserNotEligibleForAction{
-		code:     code,
-		reason:   reason,
-		domain:   domain,
-		metadata: metadata,
+		code:             code,
+		errorInfoDetails: errorInfoDetails,
+		debugInfoDetails: debugInfoDetails,
+	}
+}
+
+type ServiceErrorValidationError struct {
+	code              code.Code
+	errorInfoDetails  *errdetails.ErrorInfo
+	debugInfoDetails  *errdetails.DebugInfo
+	badRequestDetails *errdetails.BadRequest
+}
+
+func (e ServiceErrorValidationError) Error() string {
+	return fmt.Sprintf("%s: %s", e.code, e.errorInfoDetails.Reason)
+}
+
+func (e ServiceErrorValidationError) Code() code.Code {
+	return e.code
+}
+
+func (e ServiceErrorValidationError) ErrorInfoDetails() *errdetails.ErrorInfo {
+	return e.errorInfoDetails
+}
+
+func (e ServiceErrorValidationError) BadRequestDetails() *errdetails.BadRequest {
+	return e.badRequestDetails
+}
+
+func (e ServiceErrorValidationError) DebugInfoDetails() *errdetails.DebugInfo {
+	return e.debugInfoDetails
+}
+
+func NewServiceErrorValidationError(
+	code code.Code,
+	errorInfoDetails *errdetails.ErrorInfo,
+	badRequestDetails *errdetails.BadRequest,
+	debugInfoDetails *errdetails.DebugInfo,
+) ServiceErrorValidationError {
+	return ServiceErrorValidationError{
+		code:              code,
+		errorInfoDetails:  errorInfoDetails,
+		badRequestDetails: badRequestDetails,
+		debugInfoDetails:  debugInfoDetails,
 	}
 }
 
@@ -87,22 +203,112 @@ const (
 	ServiceErrorUserNotEligibleForActionCode   = 7
 	ServiceErrorUserNotEligibleForActionDomain = "service.entity"
 	ServiceErrorUserNotEligibleForActionReason = "SERVICE_ERROR_USER_NOT_ELIGIBLE_FOR_ACTION"
+	ServiceErrorValidationErrorCode            = 3
+	ServiceErrorValidationErrorDomain          = "service.entity"
+	ServiceErrorValidationErrorReason          = "SERVICE_ERROR_VALIDATION_ERROR"
 )
 
-func ServiceErrorDecoderMapper(code code.Code, reason, domain string, metadata map[string]string) error {
-	switch reason {
+func ServiceErrorDecoder(payload []byte) error {
+	details, err := decode(payload)
+	if err != nil {
+		return err
+	}
+	switch details.ErrorInfoDetails.Reason {
 	case ServiceErrorEntityNotFoundReason:
-		return NewServiceErrorEntityNotFound(code, reason, domain, metadata)
+		return NewServiceErrorEntityNotFound(details.Code, details.ErrorInfoDetails, details.ResourceInfoDetails, details.DebugInfoDetails)
 	case ServiceErrorUserNotEligibleForActionReason:
-		return NewServiceErrorUserNotEligibleForAction(code, reason, domain, metadata)
+		return NewServiceErrorUserNotEligibleForAction(details.Code, details.ErrorInfoDetails, details.DebugInfoDetails)
+	case ServiceErrorValidationErrorReason:
+		return NewServiceErrorValidationError(details.Code, details.ErrorInfoDetails, details.BadRequestDetails, details.DebugInfoDetails)
 	default:
-		return fmt.Errorf("unknown reason: %s", reason)
+		return fmt.Errorf("unknown reason: %s", details.ErrorInfoDetails.Reason)
 	}
 }
 
-func ServiceErrorEntityNotFoundEncoder(metadata map[string]string) (code.Code, string, string, map[string]string) {
-	return ServiceErrorEntityNotFoundCode, ServiceErrorEntityNotFoundReason, ServiceErrorEntityNotFoundDomain, metadata
+func ServiceErrorEntityNotFoundEncoder(
+	errorInfoMetadata map[string]string,
+	resourceInfoDetails *errdetails.ResourceInfo,
+	debugInfoDetails *errdetails.DebugInfo,
+) ([]byte, error) {
+	var details []*anypb.Any
+	infoDetail, err := anypb.New(&errdetails.ErrorInfo{
+		Reason:   ServiceErrorEntityNotFoundReason,
+		Metadata: errorInfoMetadata,
+		Domain:   ServiceErrorEntityNotFoundDomain,
+	})
+	if err != nil {
+		return nil, err
+	}
+	details = append(details, infoDetail)
+	if resourceInfoDetails != nil {
+		detail, err := anypb.New(resourceInfoDetails)
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, detail)
+	}
+	if debugInfoDetails != nil {
+		detail, err := anypb.New(debugInfoDetails)
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, detail)
+	}
+	return encode(ServiceErrorEntityNotFoundCode, details)
 }
-func ServiceErrorUserNotEligibleForActionEncoder(metadata map[string]string) (code.Code, string, string, map[string]string) {
-	return ServiceErrorUserNotEligibleForActionCode, ServiceErrorUserNotEligibleForActionReason, ServiceErrorUserNotEligibleForActionDomain, metadata
+
+func ServiceErrorUserNotEligibleForActionEncoder(
+	errorInfoMetadata map[string]string,
+	debugInfoDetails *errdetails.DebugInfo,
+) ([]byte, error) {
+	var details []*anypb.Any
+	infoDetail, err := anypb.New(&errdetails.ErrorInfo{
+		Reason:   ServiceErrorUserNotEligibleForActionReason,
+		Metadata: errorInfoMetadata,
+		Domain:   ServiceErrorUserNotEligibleForActionDomain,
+	})
+	if err != nil {
+		return nil, err
+	}
+	details = append(details, infoDetail)
+	if debugInfoDetails != nil {
+		detail, err := anypb.New(debugInfoDetails)
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, detail)
+	}
+	return encode(ServiceErrorUserNotEligibleForActionCode, details)
+}
+
+func ServiceErrorValidationErrorEncoder(
+	errorInfoMetadata map[string]string,
+	badRequestDetails *errdetails.BadRequest,
+	debugInfoDetails *errdetails.DebugInfo,
+) ([]byte, error) {
+	var details []*anypb.Any
+	infoDetail, err := anypb.New(&errdetails.ErrorInfo{
+		Reason:   ServiceErrorValidationErrorReason,
+		Metadata: errorInfoMetadata,
+		Domain:   ServiceErrorValidationErrorDomain,
+	})
+	if err != nil {
+		return nil, err
+	}
+	details = append(details, infoDetail)
+	if badRequestDetails != nil {
+		detail, err := anypb.New(badRequestDetails)
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, detail)
+	}
+	if debugInfoDetails != nil {
+		detail, err := anypb.New(debugInfoDetails)
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, detail)
+	}
+	return encode(ServiceErrorValidationErrorCode, details)
 }

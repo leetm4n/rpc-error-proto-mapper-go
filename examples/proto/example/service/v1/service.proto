@@ -21,4 +21,9 @@ enum ServiceError {
     code: 7,
     domain: "service.entity",
   }];
+  // The validation of the request failed.
+  SERVICE_ERROR_VALIDATION_ERROR = 3 [(rpc.errormapper.v1.options) = {
+    code: 3,
+    domain: "service.entity",
+  }];
 }
