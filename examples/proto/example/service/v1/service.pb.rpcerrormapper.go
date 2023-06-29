@@ -5,80 +5,11 @@ package exampleservicev1
 
 import (
 	"fmt"
-	"google.golang.org/genproto/googleapis/rpc/status"
+	"github.com/leetm4n/rpc-error-proto-mapper-go/pkg/encoder"
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
-
-func encode(code code.Code, details []*anypb.Any) ([]byte, error) {
-	marshalled, err := proto.Marshal(&status.Status{
-		Code:    int32(code),
-		Details: details,
-		Message: "error",
-	})
-	if err != nil {
-		return nil, err
-	}
-	return marshalled, nil
-}
-
-type details struct {
-	Code                       code.Code
-	ErrorInfoDetails           *errdetails.ErrorInfo
-	RetryInfoDetails           *errdetails.RetryInfo
-	BadRequestDetails          *errdetails.BadRequest
-	DebugInfoDetails           *errdetails.DebugInfo
-	QuotaFailureDetails        *errdetails.QuotaFailure
-	PreconditionFailureDetails *errdetails.PreconditionFailure
-	ResourceInfoDetails        *errdetails.ResourceInfo
-}
-
-func decode(payload []byte) (*details, error) {
-	s := &status.Status{}
-	err := proto.Unmarshal(payload, s)
-	if err != nil {
-		return nil, err
-	}
-	var errorInfoDetails *errdetails.ErrorInfo
-	var badRequestDetails *errdetails.BadRequest
-	var debugInfoDetails *errdetails.DebugInfo
-	var quotaFailureDetails *errdetails.QuotaFailure
-	var preconditionFailureDetails *errdetails.PreconditionFailure
-	var resourceInfoDetails *errdetails.ResourceInfo
-	for _, detail := range s.Details {
-		unmarshalled, err := anypb.UnmarshalNew(detail, proto.UnmarshalOptions{})
-		if err != nil {
-			return nil, err
-		}
-		switch v := unmarshalled.(type) {
-		case *errdetails.ErrorInfo:
-			errorInfoDetails = v
-		case *errdetails.BadRequest:
-			badRequestDetails = v
-		case *errdetails.DebugInfo:
-			debugInfoDetails = v
-		case *errdetails.QuotaFailure:
-			quotaFailureDetails = v
-		case *errdetails.PreconditionFailure:
-			preconditionFailureDetails = v
-		case *errdetails.ResourceInfo:
-			resourceInfoDetails = v
-		default:
-			return nil, fmt.Errorf("unknown error detail: %s", v)
-		}
-	}
-	return &details{
-		Code:                       code.Code(s.Code),
-		ErrorInfoDetails:           errorInfoDetails,
-		BadRequestDetails:          badRequestDetails,
-		DebugInfoDetails:           debugInfoDetails,
-		QuotaFailureDetails:        quotaFailureDetails,
-		PreconditionFailureDetails: preconditionFailureDetails,
-		ResourceInfoDetails:        resourceInfoDetails,
-	}, nil
-}
 
 type ServiceErrorEntityNotFound struct {
 	code                code.Code
@@ -209,7 +140,7 @@ const (
 )
 
 func ServiceErrorDecoder(payload []byte) error {
-	details, err := decode(payload)
+	details, err := encoder.Decode(payload)
 	if err != nil {
 		return err
 	}
@@ -254,7 +185,7 @@ func ServiceErrorEntityNotFoundEncoder(
 		}
 		details = append(details, detail)
 	}
-	return encode(ServiceErrorEntityNotFoundCode, details)
+	return encoder.Encode(ServiceErrorEntityNotFoundCode, details)
 }
 
 func ServiceErrorUserNotEligibleForActionEncoder(
@@ -278,7 +209,7 @@ func ServiceErrorUserNotEligibleForActionEncoder(
 		}
 		details = append(details, detail)
 	}
-	return encode(ServiceErrorUserNotEligibleForActionCode, details)
+	return encoder.Encode(ServiceErrorUserNotEligibleForActionCode, details)
 }
 
 func ServiceErrorValidationErrorEncoder(
@@ -310,5 +241,5 @@ func ServiceErrorValidationErrorEncoder(
 		}
 		details = append(details, detail)
 	}
-	return encode(ServiceErrorValidationErrorCode, details)
+	return encoder.Encode(ServiceErrorValidationErrorCode, details)
 }

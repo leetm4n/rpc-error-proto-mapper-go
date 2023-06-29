@@ -27,17 +27,13 @@ func (g *generator) Generate() {
 	g.addImports(
 		[]string{
 			"fmt",
-			"google.golang.org/genproto/googleapis/rpc/status",
+			"github.com/leetm4n/rpc-error-proto-mapper-go/pkg/encoder",
 			"google.golang.org/genproto/googleapis/rpc/code",
 			"google.golang.org/genproto/googleapis/rpc/errdetails",
-			"google.golang.org/protobuf/proto",
 			"google.golang.org/protobuf/types/known/anypb",
 		},
 		[]string{},
 	)
-	g.addEncoderFunction()
-	g.addEmptyLine()
-	g.addDecoderFunction()
 	g.addEmptyLine()
 	g.addMappers()
 	g.addEmptyLine()
@@ -250,84 +246,9 @@ func (g *generator) addErrors(enum *protogen.Enum) {
 	}
 }
 
-func (g *generator) addEncoderFunction() {
-	g.gen.P("func encode(code code.Code, details []*anypb.Any) ([]byte, error) {")
-	g.gen.P("  marshalled, err := proto.Marshal(&status.Status{")
-	g.gen.P("    Code: int32(code),")
-	g.gen.P("    Details: details,")
-	g.gen.P("    Message: \"error\",")
-	g.gen.P("  })")
-	g.gen.P("  if err != nil {")
-	g.gen.P("    return nil, err")
-	g.gen.P("  }")
-	g.gen.P("  return marshalled, nil")
-	g.gen.P("}")
-}
-
-func (g *generator) addDecoderFunction() {
-	g.gen.P("type details struct {")
-	g.gen.P("  Code code.Code")
-	g.gen.P("  ErrorInfoDetails *errdetails.ErrorInfo")
-	g.gen.P("  RetryInfoDetails *errdetails.RetryInfo")
-	g.gen.P("  BadRequestDetails *errdetails.BadRequest")
-	g.gen.P("  DebugInfoDetails *errdetails.DebugInfo")
-	g.gen.P("  QuotaFailureDetails *errdetails.QuotaFailure")
-	g.gen.P("  PreconditionFailureDetails *errdetails.PreconditionFailure")
-	g.gen.P("  ResourceInfoDetails *errdetails.ResourceInfo")
-	g.gen.P("}")
-
-	g.addEmptyLine()
-
-	g.gen.P("func decode(payload []byte) (*details, error) {")
-	g.gen.P("  s := &status.Status{}")
-	g.gen.P("  err := proto.Unmarshal(payload, s)")
-	g.gen.P("  if err != nil {")
-	g.gen.P("    return nil, err")
-	g.gen.P("  }")
-	g.gen.P("  var errorInfoDetails *errdetails.ErrorInfo")
-	g.gen.P("  var badRequestDetails *errdetails.BadRequest")
-	g.gen.P("  var debugInfoDetails *errdetails.DebugInfo")
-	g.gen.P("  var quotaFailureDetails *errdetails.QuotaFailure")
-	g.gen.P("  var preconditionFailureDetails *errdetails.PreconditionFailure")
-	g.gen.P("  var resourceInfoDetails *errdetails.ResourceInfo")
-	g.gen.P("  for _, detail := range s.Details {")
-	g.gen.P("    unmarshalled, err := anypb.UnmarshalNew(detail, proto.UnmarshalOptions{})")
-	g.gen.P("    if err != nil {")
-	g.gen.P("      return nil, err")
-	g.gen.P("    }")
-	g.gen.P("    switch v := unmarshalled.(type) {")
-	g.gen.P("    case *errdetails.ErrorInfo:")
-	g.gen.P("      errorInfoDetails = v")
-	g.gen.P("    case *errdetails.BadRequest:")
-	g.gen.P("      badRequestDetails = v")
-	g.gen.P("    case *errdetails.DebugInfo:")
-	g.gen.P("      debugInfoDetails = v")
-	g.gen.P("    case *errdetails.QuotaFailure:")
-	g.gen.P("      quotaFailureDetails = v")
-	g.gen.P("    case *errdetails.PreconditionFailure:")
-	g.gen.P("      preconditionFailureDetails = v")
-	g.gen.P("    case *errdetails.ResourceInfo:")
-	g.gen.P("      resourceInfoDetails = v")
-	g.gen.P("    default:")
-	g.gen.P("      return nil, fmt.Errorf(\"unknown error detail: %s\", v)")
-	g.gen.P("    }")
-	g.gen.P("  }")
-	g.gen.P("  return &details{")
-	g.gen.P("    Code: code.Code(s.Code),")
-	g.gen.P("    ErrorInfoDetails: errorInfoDetails,")
-	g.gen.P("    BadRequestDetails: badRequestDetails,")
-	g.gen.P("    DebugInfoDetails: debugInfoDetails,")
-	g.gen.P("    QuotaFailureDetails: quotaFailureDetails,")
-	g.gen.P("    PreconditionFailureDetails: preconditionFailureDetails,")
-	g.gen.P("    ResourceInfoDetails: resourceInfoDetails,")
-	g.gen.P("  }, nil")
-	g.gen.P("}")
-
-}
-
 func (g *generator) addDecoderMapper(enum *protogen.Enum) {
 	g.gen.P(fmt.Sprintf("func %sDecoder(payload []byte) error {", enum.GoIdent.GoName))
-	g.gen.P("  details, err := decode(payload)")
+	g.gen.P("  details, err := encoder.Decode(payload)")
 	g.gen.P("  if err != nil {")
 	g.gen.P("    return err")
 	g.gen.P("  }")
@@ -468,7 +389,7 @@ func (g *generator) addEncoder(value *protogen.EnumValue, enum *protogen.Enum) {
 	g.gen.P("    }")
 	g.gen.P("    details = append(details, detail)")
 	g.gen.P("  }")
-	g.gen.P(fmt.Sprintf("  return encode(%sCode, details)", name))
+	g.gen.P(fmt.Sprintf("  return encoder.Encode(%sCode, details)", name))
 	g.gen.P("}")
 }
 
